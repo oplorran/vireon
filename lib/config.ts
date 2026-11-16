@@ -40,13 +40,13 @@ export const RECURRING = false;
 
 /** Checkouts. */
 export const CHECKOUT = {
-  complete: process.env.NEXT_PUBLIC_CHECKOUT_COMPLETE ?? "https://go.centerpag.com/PPU38CQHLHP?upsell=true",
-  essential: process.env.NEXT_PUBLIC_CHECKOUT_ESSENTIAL ?? "https://go.centerpag.com/PPU38CQHLHJ?upsell=true",
+  complete: process.env.NEXT_PUBLIC_CHECKOUT_COMPLETE ?? "https://go.centerpag.com/PPU38CQHQEA?upsell=true",
+  essential: process.env.NEXT_PUBLIC_CHECKOUT_ESSENTIAL ?? "https://go.centerpag.com/PPU38CQHQEG?upsell=true",
   /** Discounted rescue offer ($11.90) used only by /backredirect. */
   discount: process.env.NEXT_PUBLIC_CHECKOUT_DISCOUNT ?? "https://go.centerpag.com/PPU38CQHH9E",
-  up1: process.env.NEXT_PUBLIC_CHECKOUT_UP1 ?? "https://go.centerpag.com/PPU38CQHLI4?upsell=true",
-  up2: process.env.NEXT_PUBLIC_CHECKOUT_UP2 ?? "https://go.centerpag.com/PPU38CQHLI9?upsell=true",
-  up3: process.env.NEXT_PUBLIC_CHECKOUT_UP3 ?? "https://go.centerpag.com/PPU38CQHLIE?upsell=true",
+  up1: process.env.NEXT_PUBLIC_CHECKOUT_UP1 ?? "https://go.centerpag.com/PPU38CQHQE6?upsell=true",
+  up2: process.env.NEXT_PUBLIC_CHECKOUT_UP2 ?? "https://go.centerpag.com/PPU38CQHQE4?upsell=true",
+  up3: process.env.NEXT_PUBLIC_CHECKOUT_UP3 ?? "https://go.centerpag.com/PPU38CQHQEL?upsell=true",
 } as const;
 
 export const ROUTES = {
