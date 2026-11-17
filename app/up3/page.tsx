@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CHECKOUT, PRICES, ROUTES } from "@/lib/config";
+import { planFromHref, trackCheckout } from "@/lib/pixel";
 import { useUtms } from "@/lib/useUtms";
 import { usd } from "@/lib/formato";
 
@@ -47,8 +48,11 @@ export default function Up3Page() {
   }, [hasUtm]);
 
   function decline() {
-    if (hasUtm) window.location.href = href;
-    else router.push(`${ROUTES.thanks}${window.location.search}${window.location.hash}`);
+    if (hasUtm) {
+      const plan = planFromHref(CHECKOUT.up3);
+      if (plan) trackCheckout(plan.name, plan.value);
+      window.location.href = href;
+    } else router.push(`${ROUTES.thanks}${window.location.search}${window.location.hash}`);
   }
 
   const barHeight = running ? (size / 19.5) * 80 : 57;

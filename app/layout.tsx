@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Sora } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/lib/i18n";
+import { MetaPixel } from "@/components/MetaPixel";
 import { TitleSync } from "@/components/TitleSync";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${inter.variable} ${display.variable} scroll-smooth`}>
       <body className="font-sans antialiased">
         <LanguageProvider>
+          <MetaPixel />
           <TitleSync />
           {children}
         </LanguageProvider>

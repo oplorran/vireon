@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUtms } from "@/lib/useUtms";
+import { planFromHref, trackCheckout } from "@/lib/pixel";
 import { usd } from "@/lib/formato";
 
 type Pillar = { icon: string; title: string };
@@ -76,14 +77,23 @@ export function UpsellShell(props: Props) {
   const { temUtm: hasUtm, externo } = useUtms();
   const acceptRef = useRef<HTMLButtonElement | null>(null);
 
+  /** Buttons navigate via JS, so the click delegation cannot see the href. */
+  function register() {
+    const plan = planFromHref(buyHref);
+    if (plan) trackCheckout(plan.name, plan.value);
+  }
+
   /** With UTMs everything goes to checkout; without them we walk the funnel. */
   function accept() {
+    register();
     window.location.href = externo(buyHref);
   }
 
   function decline() {
-    if (hasUtm) window.location.href = externo(buyHref);
-    else router.push(declineTo);
+    if (hasUtm) {
+      register();
+      window.location.href = externo(buyHref);
+    } else router.push(declineTo);
   }
 
   /** Auto-accept 14s in, as the original does for traffic with tracking. */
