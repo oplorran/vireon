@@ -22,6 +22,11 @@ export const VSL = {
     account: process.env.NEXT_PUBLIC_VTURB_ACCOUNT ?? "d331dfa7-f65a-427e-934f-2c0eb96fde35",
     idVideo: process.env.NEXT_PUBLIC_VSL_OFFER_ID ?? "6af363ef05e11b886f13c5ea",
     aspect: 133.33333333333331,
+    /**
+     * Safety net only: the pitch opens on the player's `video:ended` event.
+     * This timer covers a player that never loads or never reports the end
+     * (blocked script, autoplay refused, m3u8 failure).
+     */
     delay: 233,
   },
 } as const;

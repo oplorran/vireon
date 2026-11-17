@@ -1,8 +1,9 @@
-import type { CSSProperties, DetailedHTMLProps, HTMLAttributes } from "react";
+import type { CSSProperties, DetailedHTMLProps, HTMLAttributes, Ref } from "react";
 
 type Props = DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & {
   id?: string;
   style?: CSSProperties;
+  ref?: Ref<HTMLElement>;
 };
 
 declare module "react" {

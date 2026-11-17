@@ -181,30 +181,44 @@ const SUMMARY_LABELS: Record<string, string> = {
 export function Offer() {
   const { externo } = useUtms();
   const [revealed, setRevealed] = useState(false);
+  const [revealCount, setRevealCount] = useState(0);
   const [review, setReview] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [saved, setSaved] = useState<Saved>({});
   const [checked, setChecked] = useState(false);
   const stripRef = useRef<HTMLDivElement | null>(null);
   const scrollTimer = useRef<number | null>(null);
-  const salesRef = useRef<HTMLDivElement | null>(null);
+  const pitchRef = useRef<HTMLDivElement | null>(null);
+  const revealedRef = useRef(false);
+
+  /** The reveal is idempotent: the video end and the timer can both call it. */
+  const reveal = useCallback(() => {
+    if (revealedRef.current) return;
+    revealedRef.current = true;
+    setRevealed(true);
+    try {
+      document.cookie = "vireon_pitch=1; path=/; max-age=2592000; SameSite=Lax";
+    } catch {
+      /* private mode */
+    }
+    /* Bumping the counter lets an app retry the scroll after the pitch
+       actually exists in the DOM. */
+    setRevealCount((count) => count + 1);
+  }, []);
 
   /** Back from the pitch opens the /backredirect rescue offer. */
   useBackTrap(revealed);
 
-  /** Original waits 233 s (the offer VSL length) before revealing the pitch. */
+  /**
+   * The pitch opens when the VSL ends — not on a blind 233 s timer, which
+   * fires even when the player never starts (autoplay blocked on mobile).
+   * A returning visitor (cookie) and a short safety timer cover the rest.
+   */
   useEffect(() => {
     try {
       const already = document.cookie.split(";").some((c) => c.trim() === "vireon_pitch=1");
       setSaved(readSaved());
       setChecked(true);
-      const reveal = () => {
-        setRevealed(true);
-        document.cookie = "vireon_pitch=1; path=/; max-age=2592000; SameSite=Lax";
-        window.setTimeout(() => {
-          salesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 150);
-      };
       if (already) {
         reveal();
         return undefined;
@@ -212,11 +226,51 @@ export function Offer() {
       const timer = window.setTimeout(reveal, VSL.offer.delay * 1000);
       return () => window.clearTimeout(timer);
     } catch {
-      setRevealed(true);
+      reveal();
       setChecked(true);
       return undefined;
     }
-  }, []);
+  }, [reveal]);
+
+  const onVideoEnded = useCallback(() => reveal(), [reveal]);
+
+  /**
+   * Scroll to the offer once it exists.
+   *
+   * Mobile: the doctor/player header fills the whole viewport, so the fresh
+   * pitch would sit below the fold — we move the user to the first block.
+   * Desktop: the player keeps its place and the pitch is brought into view
+   * right under it, so the video stays on screen while the offer opens.
+   */
+  useEffect(() => {
+    if (!revealed) return undefined;
+    const pitch = pitchRef.current;
+    if (!pitch) return undefined;
+
+    const behavior: ScrollBehavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "auto"
+      : "smooth";
+    const frames: number[] = [];
+
+    /* Two frames: the pitch must be laid out before its position is read. */
+    frames.push(
+      window.requestAnimationFrame(() => {
+        frames.push(
+          window.requestAnimationFrame(() => {
+            const wide = window.matchMedia("(min-width: 768px)").matches;
+            /* Desktop: leave the doctor badge and the whole player above the
+               pitch; mobile: the pitch is the very first thing on screen. */
+            const offset = wide ? 96 + (document.querySelector("vturb-smartplayer")?.clientHeight ?? 0) : 0;
+            const top = wide ? pitch.getBoundingClientRect().top + window.scrollY - offset : pitch.offsetTop;
+            window.scrollTo({ top: Math.max(0, Math.round(top)), behavior });
+            pitch.focus({ preventScroll: true });
+          }),
+        );
+      }),
+    );
+
+    return () => frames.forEach((frame) => window.cancelAnimationFrame(frame));
+  }, [revealed, revealCount]);
 
   /** Six rows: derived from the quiz answers, as in the original. */
   const summary = useMemo(() => {
@@ -255,47 +309,44 @@ export function Offer() {
   const buyClass =
     "flex min-h-[56px] w-full items-center justify-center rounded-xl px-5 text-center text-sm font-extrabold transition-transform active:scale-[0.98]";
 
-  if (!revealed) {
-    return (
-      <div className="min-h-screen bg-white pt-4">
-        <div className="mx-auto flex max-w-[440px] flex-col items-center px-6 py-6">
-          <DoctorBadge />
-          <h2 className="mb-1 mt-4 text-center text-[22px] font-bold leading-tight text-[#1a1a1a]">
-            Your protocol is ready
-          </h2>
-          <p className="mb-4 mt-1 text-center text-[13px] text-[#888]">The specialist has one last message for you.</p>
-          <div className="mb-3 w-full">
-            <Vsl variant="offer" />
-          </div>
+  /**
+   * The header holds the player and must stay mounted across the reveal:
+   * swapping branches would remount the player and restart the video.
+   */
+  const header = (
+    <div className="pt-4">
+      <div className="mx-auto flex max-w-[440px] flex-col items-center px-6 py-6">
+        <DoctorBadge />
+        <h1 className="mb-1 mt-4 text-center text-[22px] font-bold leading-tight text-[#1a1a1a]">
+          Your protocol is ready
+        </h1>
+        <p className="mb-4 mt-1 text-center text-[13px] text-[#888]">The specialist has one last message for you.</p>
+        <div className="mb-3 w-full">
+          <Vsl variant="offer" onEnded={onVideoEnded} />
         </div>
+        {!revealed && (
+          <p className="min-h-[20px] text-center text-[12px] text-[#888]">
+            Watch the message — your offer opens right below.
+          </p>
+        )}
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
-    <div ref={salesRef} data-testid="sales-root" className="animate-fade-in w-full bg-white text-[#1f252e]">
-      {/* Doctor + player header, as step e23 */}
-      <div className="pt-4">
-        <div className="mx-auto flex max-w-[440px] flex-col items-center px-6 py-6">
-          <DoctorBadge />
-          <h2 className="mb-1 mt-4 text-center text-[22px] font-bold leading-tight text-[#1a1a1a]">
-            Your protocol is ready
-          </h2>
-          <p className="mb-4 mt-1 text-center text-[13px] text-[#888]">The specialist has one last message for you.</p>
-          <div className="mb-3 w-full">
-            <Vsl variant="offer" />
-          </div>
-        </div>
-      </div>
+    <div className="min-h-dvh w-full bg-white text-[#1f252e]">
+      {header}
 
-      {/* Choose your access (pricing) — first block, as in the original */}
-      <section className="px-5 py-12">
-        <div className="mx-auto max-w-[760px]">
-          <p className="text-center text-xs font-extrabold uppercase text-[#36d399]">Choose your Vireon access</p>
-          <h2 className="mt-2 text-center text-[28px] font-black">Start with the option that fits you</h2>
-          <p className="mx-auto mt-3 max-w-[540px] text-center text-sm text-[#67717e]">
-            Both options include your personalized protocol and private digital access.
-          </p>
+      {revealed && (
+        <div ref={pitchRef} tabIndex={-1} className="animate-fade-in outline-none">
+          {/* Choose your access (pricing) — first block, as in the original */}
+          <section className="px-5 py-12">
+            <div className="mx-auto max-w-[760px]">
+              <p className="text-center text-xs font-extrabold uppercase text-[#36d399]">Choose your Vireon access</p>
+              <h2 className="mt-2 text-center text-[28px] font-black">Start with the option that fits you</h2>
+              <p className="mx-auto mt-3 max-w-[540px] text-center text-sm text-[#67717e]">
+                Both options include your personalized protocol and private digital access.
+              </p>
 
           {/* Complete */}
           <article className="relative mx-auto mt-8 max-w-[680px] overflow-hidden rounded-lg border-2 border-[#153324] bg-[#153324] p-6 text-white shadow-xl">
@@ -656,6 +707,8 @@ export function Offer() {
           </p>
         </div>
       </section>
+        </div>
+      )}
     </div>
   );
 }
