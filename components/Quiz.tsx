@@ -399,7 +399,7 @@ export function Quiz() {
       <div className="min-h-screen bg-white">
         {header}
 
-        <div className="pt-24">
+        <div className="pb-28 pt-24">
           {shell(
             <>
               <h2 className="mb-1 text-center text-[24px] font-bold leading-tight text-[#1a1a1a]">
